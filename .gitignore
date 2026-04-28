@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+
+venv/
+.env/
+
+app/models/*.pth
+data/radiology/images/
+
+.ipynb_checkpoints/

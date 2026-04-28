@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Medical Image Description Generator</title>
+
+    <style>
+        :root {
+            --bg-1: #030812;
+            --bg-2: #071426;
+            --bg-3: #0a1a31;
+            --bg-4: #08111f;
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-strong: rgba(255, 255, 255, 0.11);
+            --border: rgba(255, 255, 255, 0.14);
+            --border-strong: rgba(255, 255, 255, 0.18);
+            --text: rgba(255,255,255,0.95);
+            --muted: rgba(255,255,255,0.68);
+            --soft: rgba(255,255,255,0.54);
+            --cyan: #53f6ff;
+            --teal: #20f0c2;
+            --blue: #1b9cff;
+            --purple: #a855f7;
+            --pink: #ff62d4;
+            --danger: #ff6b6b;
+            --success: #2ef0a5;
+            --warning: #ffcc66;
+            --shadow: 0 24px 70px rgba(0,0,0,0.38);
+            --shadow-soft: 0 18px 40px rgba(0,0,0,0.24);
+            --ring: 0 0 0 1px rgba(255,255,255,0.06), 0 0 28px rgba(83,246,255,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 15% 10%, rgba(83,246,255,0.08), transparent 22%),
+                radial-gradient(circle at 85% 12%, rgba(168,85,247,0.09), transparent 22%),
+                radial-gradient(circle at 50% 80%, rgba(32,240,194,0.08), transparent 30%),
+                linear-gradient(135deg, var(--bg-1), var(--bg-2) 38%, var(--bg-3) 68%, var(--bg-4));
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .aurora-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .aurora-bg::before,
+        .aurora-bg::after {
+            content: "";
+            position: absolute;
+            width: 60vw;
+            height: 60vw;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.28;
+            animation: blobFloat 18s ease-in-out infinite alternate;
+        }
+
+        .aurora-bg::before {
+            background: radial-gradient(circle, rgba(83,246,255,0.85), transparent 60%);
+            top: -15%;
+            left: -10%;
+        }
+
+        .aurora-bg::after {
+            background: radial-gradient(circle, rgba(168,85,247,0.7), transparent 60%);
+            bottom: -10%;
+            right: -8%;
+            animation-delay: 5s;
+        }
+
+        .aurora-3 {
+            position: absolute;
+            width: 45vw;
+            height: 45vw;
+            left: 30%;
+            top: 20%;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(32,240,194,0.45), transparent 62%);
+            filter: blur(100px);
+            opacity: 0.32;
+            animation: blobFloat2 22s ease-in-out infinite alternate;
+        }
+
+        .grid-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 44px 44px;
+            pointer-events: none;
+            mask-image: linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(255,255,255,0.14));
+        }
+
+        .heartbeat-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            overflow: hidden;
+            opacity: 0.24;
+        }
+
+        .heartbeat-svg {
+            position: absolute;
+            left: 0;
+            width: 200%;
+            height: 180px;
+            animation: ecgMove 12s linear infinite;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.12));
+        }
+
+        .heartbeat-line-1 {
+            top: 14%;
+        }
+
+        .heartbeat-line-2 {
+            top: 45%;
+            opacity: 0.42;
+            transform: scaleY(0.9);
+            animation-duration: 16s;
+        }
+
+        .heartbeat-line-3 {
+            top: 76%;
+            opacity: 0.28;
+            transform: scaleY(0.8);
+            animation-duration: 20s;
+        }
+
+        .heartbeat-svg path {
+            fill: none;
+            stroke: rgba(255,255,255,0.38);
+            stroke-width: 2.4;
+            stroke-linejoin: round;
+            stroke-linecap: round;
+            stroke-dasharray: 8 8;
+            animation: ecgGlow 2.4s ease-in-out infinite alternate;
+        }
+
+        .particles {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            bottom: -80px;
+            border-radius: 50%;
+            opacity: 0;
+            animation: floatUp linear infinite;
+            background: rgba(255,255,255,0.78);
+            box-shadow:
+                0 0 10px rgba(255,255,255,0.25),
+                0 0 24px rgba(255,255,255,0.18),
+                0 0 32px rgba(83,246,255,0.10);
+        }
+
+        .particle.twinkle {
+            animation-name: floatUp, twinkle;
+            animation-timing-function: linear, ease-in-out;
+            animation-iteration-count: infinite, infinite;
+        }
+
+        .mouse-glow {
+            position: fixed;
+            width: 340px;
+            height: 340px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(83,246,255,0.20), rgba(83,246,255,0.08), transparent 66%);
+            pointer-events: none;
+            z-index: 3;
+            transform: translate(-50%, -50%);
+            filter: blur(24px);
+            transition: transform 0.06s linear;
+        }
+
+        .container {
+            width: min(1320px, 92%);
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .floating-nav {
+            position: sticky;
+            top: 16px;
+            z-index: 50;
+            padding-top: 18px;
+        }
+
+        .nav-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 14px 22px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-radius: 999px;
+            box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.07);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            letter-spacing: 0.2px;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, rgba(83,246,255,0.25), rgba(32,240,194,0.2));
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: 0 0 24px rgba(83,246,255,0.10);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--muted);
+            font-weight: 600;
+            transition: 0.25s ease;
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -6px;
+            width: 0;
+            height: 2px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--cyan), var(--teal));
+            transition: width 0.25s ease;
+        }
+
+        .nav-links a:hover {
+            color: white;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .hero {
+            min-height: calc(100vh - 90px);
+            display: grid;
+            align-items: center;
+            padding: 44px 0 54px;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.12fr 0.88fr;
+            gap: 28px;
+            align-items: center;
+        }
+
+        .glass {
+            background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 32px;
+        }
+
+        .hero-left {
+            padding: 46px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-left::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 18% 22%, rgba(83,246,255,0.08), transparent 24%),
+                radial-gradient(circle at 78% 16%, rgba(168,85,247,0.08), transparent 26%);
+            pointer-events: none;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            border-radius: 999px;
+            padding: 10px 16px;
+            background: rgba(83,246,255,0.1);
+            border: 1px solid rgba(83,246,255,0.18);
+            color: #98fcff;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 22px;
+            box-shadow: 0 0 22px rgba(83,246,255,0.08);
+            position: relative;
+            z-index: 1;
+        }
+
+        .eyebrow-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--teal);
+            box-shadow: 0 0 16px var(--teal);
+            animation: pulse 1.8s infinite;
+        }
+
+        .hero-title {
+            font-size: clamp(2.6rem, 6vw, 5.5rem);
+            line-height: 1.01;
+            letter-spacing: -2px;
+            font-weight: 900;
+            margin-bottom: 18px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, #ffffff, #96f7ff, #65ffc7, #ffffff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 5s linear infinite;
+        }
+
+        .typewriter-line {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.78);
+            min-height: 34px;
+            margin-bottom: 18px;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-text {
+            color: var(--muted);
+            line-height: 1.9;
+            font-size: 1.05rem;
+            max-width: 720px;
+            margin-bottom: 28px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 26px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn {
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            padding: 14px 22px;
+            border-radius: 18px;
+            font-weight: 800;
+            font-size: 15px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            color: #051220;
+            background: linear-gradient(135deg, var(--cyan), var(--teal));
+            box-shadow: 0 14px 34px rgba(83,246,255,0.24);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 16px 40px rgba(83,246,255,0.30);
+        }
+
+        .btn-secondary {
+            color: white;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.10);
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-card {
+            padding: 20px 18px;
+            border-radius: 22px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 38px rgba(0,0,0,0.20);
+            border-color: rgba(83,246,255,0.18);
+        }
+
+        .stat-value {
+            font-size: 1.7rem;
+            font-weight: 900;
+            margin-bottom: 6px;
+        }
+
+        .stat-label {
+            color: var(--muted);
+            font-size: 0.94rem;
+            line-height: 1.5;
+        }
+
+        .hero-right {
+            padding: 26px;
+        }
+
+        .upload-shell {
+            padding: 30px;
+            border-radius: 30px;
+            background: linear-gradient(180deg, rgba(5, 15, 28, 0.56), rgba(255,255,255,0.03));
+            border: 1px solid rgba(255,255,255,0.10);
+            box-shadow: var(--ring);
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .panel-subtitle {
+            color: var(--muted);
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .workflow-timeline {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .timeline-chip {
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.09);
+            font-size: 13px;
+            color: rgba(255,255,255,0.82);
+            font-weight: 700;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+
+        .upload-box {
+            position: relative;
+            border-radius: 28px;
+            padding: 34px 24px;
+            text-align: center;
+            border: 1.5px dashed rgba(83,246,255,0.40);
+            background:
+                radial-gradient(circle at top center, rgba(83,246,255,0.08), transparent 38%),
+                linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
+            transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+            overflow: hidden;
+        }
+
+        .upload-box::before {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            background: linear-gradient(135deg, rgba(83,246,255,0.10), transparent 35%, transparent 65%, rgba(168,85,247,0.10));
+            pointer-events: none;
+        }
+
+        .upload-box:hover {
+            border-color: rgba(83,246,255,0.78);
+            box-shadow: 0 0 32px rgba(83,246,255,0.10), inset 0 0 20px rgba(83,246,255,0.05);
+            transform: translateY(-2px);
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 0 12px rgba(83,246,255,0.16));
+        }
+
+        .upload-title {
+            font-size: 1.12rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .upload-text {
+            color: var(--muted);
+            line-height: 1.7;
+            margin-bottom: 16px;
+        }
+
+        .upload-label {
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: 700;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+
+        .upload-label:hover {
+            transform: translateY(-2px);
+            background: rgba(255,255,255,0.12);
+            box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 12px;
+            font-size: 14px;
+            color: #9cefff;
+            min-height: 20px;
+            letter-spacing: 0.2px;
+        }
+
+        .upload-btn {
+            width: 100%;
+            margin-top: 18px;
+            border: none;
+            border-radius: 18px;
+            padding: 15px 18px;
+            font-size: 15px;
+            font-weight: 900;
+            color: #03111b;
+            background: linear-gradient(135deg, #7ffaff, #21efc1);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 14px 30px rgba(83,246,255,0.16);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 34px rgba(83,246,255,0.24);
+        }
+
+        .loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 8, 16, 0.74);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .loader-box {
+            width: min(540px, 92%);
+            padding: 30px;
+            border-radius: 30px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .loader-spinner {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 18px;
+            border-radius: 50%;
+            border: 4px solid rgba(255,255,255,0.12);
+            border-top-color: var(--cyan);
+            border-right-color: var(--teal);
+            animation: spin 1s linear infinite;
+        }
+
+        .loader-title {
+            font-size: 1.3rem;
+            font-weight: 900;
+            margin-bottom: 12px;
+        }
+
+        .loader-step {
+            color: var(--muted);
+            min-height: 26px;
+            font-weight: 600;
+        }
+
+        .section {
+            margin-top: 30px;
+        }
+
+        .section-card {
+            padding: 30px;
+            border-radius: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 14% 18%, rgba(83,246,255,0.05), transparent 18%),
+                radial-gradient(circle at 86% 18%, rgba(168,85,247,0.05), transparent 18%);
+            pointer-events: none;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .section-text {
+            color: var(--muted);
+            line-height: 1.85;
+            position: relative;
+            z-index: 1;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin-top: 22px;
+            perspective: 1000px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .feature-card {
+            padding: 22px;
+            border-radius: 24px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.10);
+            transition: transform 0.18s ease, background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            transform-style: preserve-3d;
+            will-change: transform;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+
+        .feature-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(83,246,255,0.16), transparent 40%);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            pointer-events: none;
+        }
+
+        .feature-card:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(83,246,255,0.22);
+            box-shadow: 0 18px 40px rgba(0,0,0,0.18), 0 0 24px rgba(83,246,255,0.08);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            font-size: 1.95rem;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 2;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.08));
+        }
+
+        .feature-title {
+            font-size: 1.04rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .feature-text {
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 0.95rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 0.96fr 1.04fr;
+            gap: 22px;
+            margin-top: 22px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .preview-card, .analysis-card {
+            padding: 24px;
+            border-radius: 28px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.04));
+            border: 1px solid rgba(255,255,255,0.10);
+            transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+
+        .preview-card:hover, .analysis-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 38px rgba(0,0,0,0.18);
+            border-color: rgba(83,246,255,0.16);
+        }
+
+        .card-title {
+            font-size: 1.14rem;
+            font-weight: 900;
+            margin-bottom: 14px;
+        }
+
+        .image-stage {
+            position: relative;
+            border-radius: 24px;
+            overflow: hidden;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            min-height: 320px;
+            display: grid;
+            place-items: center;
+            box-shadow: inset 0 0 24px rgba(255,255,255,0.02);
+        }
+
+        .image-stage img {
+            width: 100%;
+            max-height: 460px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .scan-line {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, transparent 35%, rgba(83,246,255,0.18) 50%, transparent 65%);
+            animation: scanLineMove 3.6s linear infinite;
+            pointer-events: none;
+        }
+
+        .type-badge-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 800;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.07);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+
+        .badge-type {
+            color: #b8f7ff;
+        }
+
+        .badge-status-normal {
+            color: #a9ffd9;
+            background: rgba(46,240,165,0.12);
+            border-color: rgba(46,240,165,0.26);
+        }
+
+        .badge-status-abnormal {
+            color: #ffc2c2;
+            background: rgba(255,107,107,0.12);
+            border-color: rgba(255,107,107,0.28);
+        }
+
+        .badge-status-doc {
+            color: #fff0b2;
+            background: rgba(255,204,102,0.12);
+            border-color: rgba(255,204,102,0.28);
+        }
+
+        .analysis-panels {
+            display: grid;
+            gap: 16px;
+        }
+
+        .panel {
+            padding: 18px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+        }
+
+        .panel:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.16);
+            border-color: rgba(83,246,255,0.14);
+        }
+
+        .panel-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.54);
+            margin-bottom: 8px;
+        }
+
+        .panel-value {
+            line-height: 1.85;
+            color: rgba(255,255,255,0.94);
+            word-break: break-word;
+        }
+
+        .confidence-wrap {
+            margin-top: 10px;
+        }
+
+        .confidence-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 14px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .confidence-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--teal), var(--cyan), var(--blue));
+            box-shadow: 0 0 18px rgba(83,246,255,0.3);
+            transition: width 1s ease;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .insight {
+            padding: 16px;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+        }
+
+        .insight:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.16);
+            border-color: rgba(83,246,255,0.14);
+        }
+
+        .insight-title {
+            color: rgba(255,255,255,0.58);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 7px;
+        }
+
+        .insight-value {
+            font-weight: 800;
+            color: white;
+            line-height: 1.6;
+        }
+
+        .top-findings-panel {
+            padding: 18px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+
+        .top-findings-panel:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.16);
+            border-color: rgba(83,246,255,0.14);
+        }
+
+        .top-findings-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 10px;
+        }
+
+        .top-findings-list li {
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.92);
+            line-height: 1.6;
+        }
+
+        .prescription-panel,
+        .discharge-panel {
+            margin-top: 18px;
+            padding: 18px;
+            border-radius: 22px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+
+        .prescription-panel:hover,
+        .discharge-panel:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.16);
+            border-color: rgba(83,246,255,0.16);
+        }
+
+        .prescription-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 12px;
+        }
+
+        .prescription-item {
+            padding: 18px;
+            border-radius: 20px;
+            background:
+                radial-gradient(circle at top left, rgba(83,246,255,0.05), transparent 28%),
+                linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.035));
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+        }
+
+        .prescription-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 32px rgba(0,0,0,0.18);
+            border-color: rgba(83,246,255,0.18);
+        }
+
+        .prescription-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .prescription-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .prescription-icon,
+        .discharge-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            font-size: 1rem;
+            background: rgba(83,246,255,0.12);
+            border: 1px solid rgba(83,246,255,0.16);
+            box-shadow: 0 0 18px rgba(83,246,255,0.08);
+            flex-shrink: 0;
+        }
+
+        .prescription-name {
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 0;
+            line-height: 1.45;
+            word-break: break-word;
+            font-size: 1rem;
+        }
+
+        .prescription-dose-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 0.86rem;
+            font-weight: 800;
+            color: #052033;
+            background: linear-gradient(135deg, #8efbff, #58f4d0);
+            box-shadow: 0 10px 20px rgba(83,246,255,0.14);
+        }
+
+        .prescription-chips,
+        .discharge-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .prescription-chip,
+        .discharge-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.09);
+            color: rgba(255,255,255,0.9);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+        }
+
+        .prescription-chip strong,
+        .discharge-chip strong {
+            color: #9cefff;
+            font-size: 0.82rem;
+            letter-spacing: 0.3px;
+        }
+
+        .prescription-chip.use-chip {
+            background: rgba(46,240,165,0.12);
+            border-color: rgba(46,240,165,0.25);
+        }
+
+        .prescription-chip.use-chip strong {
+            color: #9fffd0;
+        }
+
+        .prescription-chip.warning-chip {
+            background: rgba(255,107,107,0.12);
+            border-color: rgba(255,107,107,0.25);
+        }
+
+        .prescription-chip.warning-chip strong {
+            color: #ffc2c2;
+        }
+
+        .discharge-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .discharge-card {
+            padding: 16px;
+            border-radius: 18px;
+            background:
+                radial-gradient(circle at top left, rgba(168,85,247,0.05), transparent 28%),
+                linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.035));
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+            transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+
+        .discharge-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 28px rgba(0,0,0,0.16);
+            border-color: rgba(168,85,247,0.18);
+        }
+
+        .discharge-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .discharge-title {
+            font-weight: 900;
+            font-size: 1rem;
+            color: #fff;
+        }
+
+        .discharge-card-content {
+            display: grid;
+            gap: 10px;
+        }
+
+        .discharge-row {
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.92);
+            line-height: 1.65;
+        }
+
+        .discharge-row strong {
+            color: #9cefff;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .discharge-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .discharge-list-item {
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.92);
+            line-height: 1.6;
+        }
+
+        .warning-box {
+            margin-top: 18px;
+            padding: 18px;
+            border-radius: 20px;
+            background: rgba(255,107,107,0.12);
+            border: 1px solid rgba(255,107,107,0.25);
+            color: #ffc0c0;
+            line-height: 1.75;
+            font-weight: 700;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(255,255,255,0.55);
+            font-size: 0.95rem;
+        }
+
+        @keyframes blobFloat {
+            0% { transform: translate(0,0) scale(1); }
+            100% { transform: translate(30px,-30px) scale(1.08); }
+        }
+
+        @keyframes blobFloat2 {
+            0% { transform: translate(0,0) scale(1); }
+            100% { transform: translate(-40px,20px) scale(1.06); }
+        }
+
+        @keyframes shimmer {
+            to { background-position: 200% center; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.35); opacity: 0.72; }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes scanLineMove {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 0;
+            }
+            15% {
+                opacity: 0.85;
+            }
+            100% {
+                transform: translateY(-115vh) scale(1.35);
+                opacity: 0;
+            }
+        }
+
+        @keyframes twinkle {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.6); }
+        }
+
+        @keyframes ecgMove {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        @keyframes ecgGlow {
+            0% {
+                stroke: rgba(255,255,255,0.25);
+                filter: drop-shadow(0 0 2px rgba(255,255,255,0.06));
+            }
+            100% {
+                stroke: rgba(255,255,255,0.46);
+                filter: drop-shadow(0 0 8px rgba(255,255,255,0.14));
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .hero-grid,
+            .result-grid,
+            .features-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .hero-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .insights-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .features-grid,
+            .result-grid,
+            .hero-stats,
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-left,
+            .hero-right,
+            .section-card {
+                padding: 22px;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .prescription-head {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .prescription-dose-badge {
+                width: fit-content;
+            }
+
+            .heartbeat-svg {
+                height: 140px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="aurora-bg">
+        <div class="aurora-3"></div>
+    </div>
+
+    <div class="heartbeat-bg">
+        <svg class="heartbeat-svg heartbeat-line-1" viewBox="0 0 1920 180" preserveAspectRatio="none">
+            <path d="M0 90 L120 90 L180 90 L220 40 L260 145 L310 25 L355 90 L460 90 L520 90 L560 58 L595 130 L640 36 L690 90 L820 90 L920 90 L960 52 L1000 142 L1045 30 L1090 90 L1210 90 L1290 90 L1330 48 L1370 146 L1410 30 L1455 90 L1600 90 L1700 90 L1740 60 L1772 128 L1810 40 L1860 90 L1920 90" />
+        </svg>
+        <svg class="heartbeat-svg heartbeat-line-2" viewBox="0 0 1920 180" preserveAspectRatio="none">
+            <path d="M0 90 L140 90 L220 90 L258 54 L292 128 L330 38 L376 90 L520 90 L610 90 L648 58 L684 132 L720 34 L766 90 L920 90 L1000 90 L1038 55 L1074 129 L1110 38 L1158 90 L1320 90 L1400 90 L1438 62 L1474 122 L1510 42 L1555 90 L1710 90 L1792 90 L1830 58 L1866 130 L1902 40 L1920 90" />
+        </svg>
+        <svg class="heartbeat-svg heartbeat-line-3" viewBox="0 0 1920 180" preserveAspectRatio="none">
+            <path d="M0 90 L160 90 L250 90 L286 60 L316 120 L352 44 L396 90 L560 90 L650 90 L688 54 L724 132 L758 36 L805 90 L980 90 L1070 90 L1104 58 L1142 126 L1176 42 L1222 90 L1380 90 L1470 90 L1508 56 L1544 130 L1582 38 L1626 90 L1800 90 L1870 90 L1902 62 L1920 90" />
+        </svg>
+    </div>
+
+    <div class="grid-overlay"></div>
+    <div class="particles" id="particles"></div>
+    <div class="mouse-glow" id="mouseGlow"></div>
+
+    <div class="loader-overlay" id="loaderOverlay">
+        <div class="loader-box">
+            <div class="loader-spinner"></div>
+            <div class="loader-title">Analyzing Medical Input</div>
+            <div class="loader-step" id="loaderStep">Preparing secure AI workflow...</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="floating-nav">
+            <div class="nav-inner">
+                <div class="brand">
+                    <div class="brand-icon">🩺</div>
+                    <div>AI Medical Vision</div>
+                </div>
+
+                <div class="nav-links">
+                    <a href="#uploadSection">Upload</a>
+                    <a href="#capabilities">Capabilities</a>
+                    <a href="#resultsSection">Results</a>
+                </div>
+            </div>
+        </div>
+
+        <section class="hero">
+            <div class="hero-grid">
+                <div class="glass hero-left">
+                    <div class="eyebrow">
+                        <span class="eyebrow-dot"></span>
+                        Advanced Multi-Module Medical AI Experience
+                    </div>
+
+                    <h1 class="hero-title">
+                        <span class="gradient-text">AI Medical Image</span><br>
+                        Description Generator
+                    </h1>
+
+                    <div class="typewriter-line" id="typewriterText"></div>
+
+                    <p class="hero-text">
+                        A premium medical AI interface designed to analyze radiology scans, printed prescriptions,
+                        lab reports, and discharge summaries through an intelligent routing pipeline that extracts,
+                        interprets, and presents assistive medical descriptions in a polished dashboard experience.
+                    </p>
+
+                    <div class="hero-actions">
+                        <a href="#uploadSection" class="btn btn-primary">Start Analysis</a>
+                        <a href="#resultsSection" class="btn btn-secondary">Explore Results</a>
+                    </div>
+
+                    <div class="hero-stats">
+                        <div class="stat-card">
+                            <div class="stat-value">4+</div>
+                            <div class="stat-label">Supported medical input categories</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">AI</div>
+                            <div class="stat-label">Smart routing across specialized modules</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">Safe</div>
+                            <div class="stat-label">Assistive academic output with disclaimers</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass hero-right" id="uploadSection">
+                    <div class="upload-shell">
+                        <div class="panel-title">Upload Medical Input</div>
+                        <div class="panel-subtitle">
+                            Drag attention to a premium AI workflow for medical image understanding and document interpretation.
+                        </div>
+
+                        <div class="workflow-timeline">
+                            <div class="timeline-chip">Upload</div>
+                            <div class="timeline-chip">Type Detection</div>
+                            <div class="timeline-chip">OCR / Model Inference</div>
+                            <div class="timeline-chip">Detailed Description</div>
+                        </div>
+
+                        <form action="/upload" method="post" enctype="multipart/form-data" id="uploadForm">
+                            <div class="upload-box" id="dropZone">
+                                <div class="upload-icon">📤</div>
+                                <div class="upload-title">Drop medical image here or browse files</div>
+                                <div class="upload-text">
+                                    Supports radiology images, printed prescriptions, reports, and summaries.
+                                </div>
+
+                                <label for="fileInput" class="upload-label">Choose Medical File</label>
+                                <input type="file" id="fileInput" name="file" required>
+
+                                <div class="file-name" id="fileName">No file selected</div>
+                            </div>
+
+                            <button type="submit" class="upload-btn">Upload & Analyze</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="capabilities">
+            <div class="glass section-card">
+                <div class="section-title">Advanced System Capabilities</div>
+                <p class="section-text">
+                    This platform uses a structured multi-module architecture to distinguish medical document inputs from
+                    radiology data and produce cleaner, safer, and more meaningful outputs in a product-grade interface.
+                </p>
+
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">📄</div>
+                        <div class="feature-title">Prescription Interpretation</div>
+                        <div class="feature-text">Reads printed prescriptions and turns extracted medical text into structured assistive summaries.</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">🧪</div>
+                        <div class="feature-title">Report Understanding</div>
+                        <div class="feature-text">Processes lab reports and discharge summaries to present cleaner contextual explanations.</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">🫁</div>
+                        <div class="feature-title">Radiology Intelligence</div>
+                        <div class="feature-text">Uses a trained radiology model to analyze chest X-rays and generate confidence-aware output.</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">🛡️</div>
+                        <div class="feature-title">Safety & Validation</div>
+                        <div class="feature-text">Maintains academic-use warnings and confidence-oriented messaging for safer interpretation.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {% if result %}
+        <section class="section" id="resultsSection">
+            <div class="glass section-card">
+                <div class="section-title">AI Analysis Dashboard</div>
+                <p class="section-text">
+                    Review the uploaded image preview, system-detected type, confidence visualization, and generated medical interpretation.
+                </p>
+
+                <div class="result-grid">
+                    <div class="preview-card">
+                        <div class="card-title">Uploaded Preview</div>
+                        <div class="image-stage">
+                            <img src="{{ file_url }}" alt="Uploaded Medical Image">
+                            <div class="scan-line"></div>
+                        </div>
+
+                        {% if prescription_details and prescription_details|length > 0 %}
+                        <div class="prescription-panel">
+                            <div class="panel-label">Prescription Details</div>
+
+                            <ul class="prescription-list">
+                                {% for med in prescription_details %}
+                                <li class="prescription-item">
+                                    <div class="prescription-head">
+                                        <div class="prescription-title-wrap">
+                                            <div class="prescription-icon">
+                                                {% if med.type == "Tablet" %}
+                                                    💊
+                                                {% elif med.type == "Capsule" %}
+                                                    🟡
+                                                {% elif med.type == "Syrup" %}
+                                                    🧴
+                                                {% elif med.type == "Injection" %}
+                                                    💉
+                                                {% else %}
+                                                    🩺
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="prescription-name">
+                                                {{ med.type }} {{ med.name }}
+                                            </div>
+                                        </div>
+
+                                        {% if med.strength != "Not specified" %}
+                                        <div class="prescription-dose-badge">
+                                            {{ med.strength }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="prescription-chips">
+                                        {% if med.schedule != "Not specified" %}
+                                        <div class="prescription-chip">
+                                            <strong>Schedule</strong>
+                                            <span>
+                                                {% if med.schedule == "1-0-1" %}
+                                                    Morning & Night
+                                                {% elif med.schedule == "1-1-1" %}
+                                                    Morning, Afternoon & Night
+                                                {% elif med.schedule == "1-1-1-1" %}
+                                                    Four times a day
+                                                {% else %}
+                                                    {{ med.schedule }}
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if med.timing != "Timing not clearly detected" %}
+                                        <div class="prescription-chip">
+                                            <strong>Timing</strong>
+                                            <span>{{ med.timing }}</span>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if med.use %}
+                                        <div class="prescription-chip use-chip">
+                                            <strong>Use</strong>
+                                            <span>{{ med.use }}</span>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if med.warning %}
+                                        <div class="prescription-chip warning-chip">
+                                            <strong>⚠ Warning</strong>
+                                            <span>{{ med.warning }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        {% if discharge_details and discharge_details|length > 0 %}
+                        <div class="discharge-panel">
+                            <div class="panel-label">Discharge Summary Details</div>
+
+                            <div class="discharge-grid">
+                                <div class="discharge-card">
+                                    <div class="discharge-head">
+                                        <div class="discharge-icon">🏥</div>
+                                        <div class="discharge-title">Patient & Stay Details</div>
+                                    </div>
+
+                                    <div class="discharge-card-content">
+                                        {% if discharge_details.patient_name and discharge_details.patient_name != "Not found" %}
+                                        <div class="discharge-row">
+                                            <strong>Patient</strong>{{ discharge_details.patient_name }}
+                                        </div>
+                                        {% endif %}
+
+                                        {% if discharge_details.admission_date and discharge_details.admission_date != "Not found" %}
+                                        <div class="discharge-row">
+                                            <strong>Admission</strong>{{ discharge_details.admission_date }}
+                                        </div>
+                                        {% endif %}
+
+                                        {% if discharge_details.discharge_date and discharge_details.discharge_date != "Not found" %}
+                                        <div class="discharge-row">
+                                            <strong>Discharge</strong>{{ discharge_details.discharge_date }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                {% if discharge_details.diagnosis and discharge_details.diagnosis != "Not found" %}
+                                <div class="discharge-card">
+                                    <div class="discharge-head">
+                                        <div class="discharge-icon">🩺</div>
+                                        <div class="discharge-title">Diagnosis</div>
+                                    </div>
+
+                                    <div class="discharge-card-content">
+                                        <div class="discharge-row">{{ discharge_details.diagnosis }}</div>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                {% if discharge_details.discharge_medications and discharge_details.discharge_medications|length > 0 %}
+                                <div class="discharge-card">
+                                    <div class="discharge-head">
+                                        <div class="discharge-icon">💊</div>
+                                        <div class="discharge-title">Discharge Medications</div>
+                                    </div>
+
+                                    <div class="discharge-card-content discharge-list">
+                                        {% for med in discharge_details.discharge_medications %}
+                                        <div class="discharge-list-item">{{ med }}</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                {% if discharge_details.follow_up and discharge_details.follow_up|length > 0 %}
+                                <div class="discharge-card">
+                                    <div class="discharge-head">
+                                        <div class="discharge-icon">📋</div>
+                                        <div class="discharge-title">Follow-up Advice</div>
+                                    </div>
+
+                                    <div class="discharge-card-content discharge-list">
+                                        {% for item in discharge_details.follow_up %}
+                                        <div class="discharge-list-item">{{ item }}</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="analysis-card">
+                        <div class="card-title">Structured Interpretation</div>
+
+                        <div class="type-badge-row">
+                            <div class="badge badge-type">Type: {{ type }}</div>
+
+                            {% if status == "Possible Abnormality" %}
+                                <div class="badge badge-status-abnormal">Status: {{ status }}</div>
+                            {% elif status == "Low Confidence" %}
+                                <div class="badge badge-status-doc">Status: {{ status }}</div>
+                            {% else %}
+                                <div class="badge badge-status-normal">Status: {{ status }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="analysis-panels">
+                            <div class="panel">
+                                <div class="panel-label">File Name</div>
+                                <div class="panel-value">{{ filename }}</div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-label">AI Description</div>
+                                <div class="panel-value">{{ result }}</div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-label">Confidence Meter</div>
+                                <div class="confidence-wrap">
+                                    <div class="confidence-top">
+                                        <span>Estimated Confidence</span>
+                                        <span id="confidenceText">{{ (confidence * 100)|round|int }}%</span>
+                                    </div>
+                                    <div class="confidence-bar">
+                                        <div class="confidence-fill" id="confidenceFill"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="insights-grid">
+                                <div class="insight">
+                                    <div class="insight-title">Detected Input</div>
+                                    <div class="insight-value">{{ type }}</div>
+                                </div>
+                                <div class="insight">
+                                    <div class="insight-title">Top Finding</div>
+                                    <div class="insight-value">{{ top_finding }}</div>
+                                </div>
+                                <div class="insight">
+                                    <div class="insight-title">Pipeline</div>
+                                    <div class="insight-value">
+                                        {% if type == 'radiology' %}
+                                            Radiology AI
+                                        {% else %}
+                                            OCR + Summary
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="insight">
+                                    <div class="insight-title">System Mode</div>
+                                    <div class="insight-value">Assistive Academic</div>
+                                </div>
+                            </div>
+
+                            <div class="top-findings-panel">
+                                <div class="panel-label">Top 3 Findings</div>
+                                {% if top_findings and top_findings|length > 0 %}
+                                    <ul class="top-findings-list">
+                                        {% for item in top_findings %}
+                                            <li>
+                                                <strong>{{ item.finding }}</strong> - {{ (item.confidence * 100) | round(1) }}%
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <div class="panel-value">Not available</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="warning-box">
+                            {{ warning }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer-note">
+                    Designed as a premium academic prototype for intelligent medical image understanding.
+                </div>
+            </div>
+        </section>
+        {% endif %}
+    </div>
+
+    <script>
+        const fileInput = document.getElementById("fileInput");
+        const fileName = document.getElementById("fileName");
+        const uploadForm = document.getElementById("uploadForm");
+        const loaderOverlay = document.getElementById("loaderOverlay");
+        const loaderStep = document.getElementById("loaderStep");
+        const mouseGlow = document.getElementById("mouseGlow");
+        const dropZone = document.getElementById("dropZone");
+        const particlesContainer = document.getElementById("particles");
+
+        function createParticles() {
+            if (!particlesContainer) return;
+
+            const particleCount = 34;
+
+            for (let i = 0; i < particleCount; i++) {
+                const p = document.createElement("span");
+                p.classList.add("particle", "twinkle");
+
+                const size = Math.random() * 5 + 2.5;
+                const left = Math.random() * 100;
+                const duration1 = 10 + Math.random() * 12;
+                const duration2 = 1.8 + Math.random() * 2.6;
+                const delay1 = Math.random() * 8;
+                const delay2 = Math.random() * 3;
+                const opacity = 0.28 + Math.random() * 0.52;
+
+                p.style.width = `${size}px`;
+                p.style.height = `${size}px`;
+                p.style.left = `${left}%`;
+                p.style.opacity = opacity;
+                p.style.animationDuration = `${duration1}s, ${duration2}s`;
+                p.style.animationDelay = `${delay1}s, ${delay2}s`;
+
+                particlesContainer.appendChild(p);
+            }
+        }
+
+        createParticles();
+
+        if (fileInput) {
+            fileInput.addEventListener("change", function () {
+                if (this.files.length > 0) {
+                    fileName.textContent = this.files[0].name;
+                } else {
+                    fileName.textContent = "No file selected";
+                }
+            });
+        }
+
+        if (dropZone && fileInput) {
+            dropZone.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = "rgba(83,246,255,0.95)";
+            });
+
+            dropZone.addEventListener("dragleave", () => {
+                dropZone.style.borderColor = "rgba(83,246,255,0.4)";
+            });
+
+            dropZone.addEventListener("drop", (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = "rgba(83,246,255,0.4)";
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    fileName.textContent = files[0].name;
+                }
+            });
+        }
+
+        if (uploadForm) {
+            uploadForm.addEventListener("submit", function () {
+                loaderOverlay.style.display = "flex";
+
+                const steps = [
+                    "Preparing secure AI workflow...",
+                    "Detecting medical input type...",
+                    "Routing to the appropriate AI module...",
+                    "Running OCR or radiology inference...",
+                    "Generating detailed assistive description..."
+                ];
+
+                let idx = 0;
+                loaderStep.textContent = steps[idx];
+
+                const interval = setInterval(() => {
+                    idx = (idx + 1) % steps.length;
+                    loaderStep.textContent = steps[idx];
+                }, 1300);
+
+                setTimeout(() => clearInterval(interval), 12000);
+            });
+        }
+
+        document.addEventListener("mousemove", (e) => {
+            if (mouseGlow) {
+                mouseGlow.style.left = e.clientX + "px";
+                mouseGlow.style.top = e.clientY + "px";
+            }
+        });
+
+        const typewriterText = document.getElementById("typewriterText");
+        const typewriterMessage = "Analyze chest X-rays, reports, prescriptions, and medical summaries with a premium AI workflow.";
+        let twIndex = 0;
+
+        function typeWriter() {
+            if (typewriterText && twIndex < typewriterMessage.length) {
+                typewriterText.textContent += typewriterMessage.charAt(twIndex);
+                twIndex++;
+                setTimeout(typeWriter, 24);
+            }
+        }
+        typeWriter();
+
+        const featureCards = document.querySelectorAll(".feature-card");
+
+        featureCards.forEach((card) => {
+            card.addEventListener("mousemove", (e) => {
+                const rect = card.getBoundingClientRect();
+
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                const rotateX = -((y - centerY) / 18);
+                const rotateY = ((x - centerX) / 18);
+
+                card.style.transform = `perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-6px) scale(1.02)`;
+                card.style.setProperty("--mx", `${x}px`);
+                card.style.setProperty("--my", `${y}px`);
+            });
+
+            card.addEventListener("mouseleave", () => {
+                card.style.transform = "perspective(900px) rotateX(0deg) rotateY(0deg) translateY(0px) scale(1)";
+            });
+        });
+
+        {% if result %}
+            const confidenceValue = {{ confidence|default(0)|float }};
+            const confidencePercent = Math.round(confidenceValue * 100);
+            const confidenceFill = document.getElementById("confidenceFill");
+            const confidenceText = document.getElementById("confidenceText");
+
+            if (confidenceFill && confidenceText) {
+                setTimeout(() => {
+                    confidenceFill.style.width = confidencePercent + "%";
+                    confidenceText.textContent = confidencePercent + "%";
+                }, 300);
+            }
+        {% endif %}
+    </script>
+</body>
+</html>
